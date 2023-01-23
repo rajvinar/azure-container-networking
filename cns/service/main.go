@@ -1305,7 +1305,7 @@ func InitializeCRDState(ctx context.Context, httpRestService cns.HTTPService, cn
 }
 
 func SetMellanoxRegKey(regvalue int) {
-	var mellanoxSearchString = "*mellanox*"
+	var mellanoxSearchString = "*Mellanox*"
 	var priorityVLANTagIdentifier = "*PriorityVLANTag"
 	var registryKeyPrefix = "HKLM:\\System\\CurrentControlSet\\Control\\Class\\"
 	cmd := fmt.Sprintf("Get-NetAdapter | Where-Object { $_.InterfaceDescription -like \"%s\" } | Select-Object -ExpandProperty Name", mellanoxSearchString)
