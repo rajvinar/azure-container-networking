@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"platform"
 	"runtime"
 	"strconv"
 	"strings"
@@ -712,6 +711,13 @@ func main() {
 		return
 	}
 
+	err = platform.SetMellanoxRegKeyPriorityVLANTag()
+	if err != nil {
+		logger.Errorf("Failed to set reg key for mellanox adapter: %v", err)
+	} else {
+		logger.Printf("Successfuly set reg key for existing Mellanox adapter.")
+	}
+
 	// Initialze state in if CNS is running in CRD mode
 	// State must be initialized before we start HTTPRestService
 	if config.ChannelMode == cns.CRD {
@@ -1302,109 +1308,4 @@ func InitializeCRDState(ctx context.Context, httpRestService cns.HTTPService, cn
 	}()
 	logger.Printf("Initialized SyncHostNCVersion loop.")
 	return nil
-}
-
-func SetMellanoxRegKey() {
-	var mellanoxSearchString = "*Mellanox*"
-	var priorityVLANTagIdentifier = "*PriorityVLANTag"
-	var registryKeyPrefix = "HKLM:\\System\\CurrentControlSet\\Control\\Class\\"
-
-	//get adapter name
-	cmd := fmt.Sprintf("Get-NetAdapter | Where-Object { $_.InterfaceDescription -like \"%s\" } | Select-Object -ExpandProperty Name", mellanoxSearchString)
-	adapatername, err := platform.ExecutePowershellCommand(cmd)
-
-	if err != nil {
-		logger.Printf("Error while executing pwsl command to get net adapter list: %v", err)
-		return
-	}
-	if adapatername == "" {
-		logger.Printf("No Network adapter found with \"%s\" in description", mellanoxSearchString)
-		return
-	}
-
-	logger.Printf("Name of Mellanox adapter : %v", adapatername)
-
-	//Find if adapter with Priority vlan tag (version 4 or up) or not(version 3)
-	cmd = fmt.Sprintf("Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like \"%s\" -and $_.Name -eq \"%s\" } | Select-Object -ExpandProperty Name", priorityVLANTagIdentifier, adapatername)
-	adapterNamewithVLANTag, err := platform.ExecutePowershellCommand(cmd)
-	if err != nil {
-		logger.Printf("Error while executing pwsh command to get VLAN Tag advance property of %s: %v", adapatername, err)
-		return
-	}
-	if adapterNamewithVLANTag != "" {
-		logger.Printf("Found %s in adapter's advanced properties", priorityVLANTagIdentifier)
-
-		//set reg value for Priorityvlantag of adapater to 3
-		cmd = fmt.Sprintf("Set-NetAdapterAdvancedProperty -Name \"%s\" -RegistryKeyword \"%s\" -RegistryValue 3", adapatername, priorityVLANTagIdentifier)
-		_, err := platform.ExecutePowershellCommand(cmd)
-		if err != nil {
-			logger.Printf("Error while setting up registery value for PriorityVLANTag for adapater: %v", err)
-		}
-		//check if value is set or not
-		cmd = fmt.Sprintf(" Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like \"%s\" -and $_.Name -eq \"%s\" } | Select-Object -ExpandProperty RegistryValue", priorityVLANTagIdentifier, adapatername)
-		regvalue, err := platform.ExecutePowershellCommand(cmd)
-		if err != nil {
-			logger.Printf("Error while checking registery value for PriorityVLANTag for adapater: %v", err)
-		}
-		if regvalue != "3" {
-			logger.Printf("Failure while setting Mellanox Network Adapter: \"%s\" with \"%s\" property value as 3", adapatername, priorityVLANTagIdentifier)
-		} else {
-			logger.Printf("Successfully set Mellanox Network Adapter: \"%s\" with \"%s\" property value as 3", adapatername, priorityVLANTagIdentifier)
-		}
-	} else {
-		//looks like its version 3 so vlantag not available so need to follow other route
-		logger.Printf("Could not find \"%s\" in adapter's advanced properties", priorityVLANTagIdentifier)
-		logger.Printf("Proceeding in a different way")
-		logger.Printf("Searching through CIM instances for Network devices with \"%s\" in the name", mellanoxSearchString)
-		cmd = fmt.Sprintf("Get-CimInstance -Namespace root/cimv2 -ClassName Win32_PNPEntity | Where-Object PNPClass -EQ \"Net\" | Where-Object { $_.Name -like \"%s\" } | Select-Object -ExpandProperty DeviceID", mellanoxSearchString)
-		deviceid, err := platform.ExecutePowershellCommand(cmd)
-		if err != nil {
-			logger.Printf("Error while executing pwsh command to get device id of %s: %v", adapatername, err)
-			return
-		}
-		if deviceid != "" {
-			logger.Printf("Device ID found: %s", deviceid)
-			logger.Printf("Getting Pnp Device properites for %s", deviceid)
-			cmd = fmt.Sprintf("Get-PnpDeviceProperty -InstanceId \"%s\" | Where-Object KeyName -EQ \"DEVPKEY_Device_Driver\" | Select-Object -ExpandProperty Data", deviceid)
-			registryKeySuffix, err := platform.ExecutePowershellCommand(cmd)
-			if err != nil {
-				logger.Printf("Error while executing pwsh command to get device id of %s: %v", adapatername, err)
-				return
-			}
-			logger.Printf("Registry key suffix found: %s", registryKeySuffix)
-			registryKeyFullPath := registryKeyPrefix + registryKeySuffix
-			logger.Printf("Registry key full path: %s", registryKeyFullPath)
-			logger.Printf("Updating %s to be 3", priorityVLANTagIdentifier)
-			cmd = fmt.Sprintf("New-ItemProperty -Path \"%s\" -Name \"%s\" -Value 3 -PropertyType String -Force", registryKeyFullPath, priorityVLANTagIdentifier)
-			_, err = platform.ExecutePowershellCommand(cmd)
-			if err != nil {
-				logger.Printf("Error while executing pwsh command to set Item property for device id  %s: %v", deviceid, err)
-				return
-			}
-			logger.Printf("Updated successfully")
-			logger.Printf("Restarting Mellanox network adapter for regkey change to take effect")
-			cmd = fmt.Sprintf("Restart-NetAdapter -Name \"%s\"", adapatername)
-			_, err = platform.ExecutePowershellCommand(cmd)
-			if err != nil {
-				logger.Printf("Error while executing pwsh command to restart net adapter  %s: %v", adapatername, err)
-				return
-			}
-			logger.Printf("Successfully restarted Mellanox network adapter")
-			//double check if value is set or not
-			cmd = fmt.Sprintf("Get-ItemProperty -Path \"%s\" -Name \"%s\" | Select-Object -ExpandProperty \"%s\"", registryKeyFullPath, priorityVLANTagIdentifier, priorityVLANTagIdentifier)
-			regvalue, err := platform.ExecutePowershellCommand(cmd)
-			if err != nil {
-				logger.Printf("Error while executing pwsh command to get item property  %s: %v", adapatername, err)
-				return
-			}
-			if regvalue != "3" {
-				logger.Printf("For Mellanox CX-3 adapters, if the problem persists please restart the VM")
-				return
-			}
-			logger.Printf("For Mellanox CX-3 adapters, the reg key set to 3")
-			return
-		}
-		logger.Printf("No network device found with \"%s\" in name, exiting.", mellanoxSearchString)
-		return
-	}
 }
