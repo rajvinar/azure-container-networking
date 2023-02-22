@@ -714,7 +714,9 @@ func main() {
 	// Set Mellanox adapter's PriorityVLANTag value to 3 if adapter exists
 	// reg key value for PriorityVLANTag = 3  --> Packet priority and VLAN enabled
 	// for more details goto https://docs.nvidia.com/networking/display/winof2v230/Configuring+the+Driver+Registry+Keys#ConfiguringtheDriverRegistryKeys-GeneralRegistryKeysGeneralRegistryKeys
-	go platform.MonitorAndSetMellanoxRegKeyPriorityVLANTag()
+	if platform.HasMellanoxAdapater() {
+		go platform.MonitorAndSetMellanoxRegKeyPriorityVLANTag()
+	}
 
 	// Initialze state in if CNS is running in CRD mode
 	// State must be initialized before we start HTTPRestService

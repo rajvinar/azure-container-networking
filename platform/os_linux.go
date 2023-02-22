@@ -179,3 +179,10 @@ func PrintDependencyPackageDetails() {
 func ReplaceFile(source, destination string) error {
 	return os.Rename(source, destination)
 }
+
+func HasMellanoxAdapater() bool {
+	return false
+}
+
+// Not needed for Linux
+func MonitorAndSetMellanoxRegKeyPriorityVLANTag() {}

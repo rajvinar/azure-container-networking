@@ -206,23 +206,32 @@ func SetSdnRemoteArpMacAddress() error {
 	return nil
 }
 
-// Regularly monitors the Mellanox PriorityVLANGTag registry value and sets it to desired value if needed
-func MonitorAndSetMellanoxRegKeyPriorityVLANTag() {
+func HasMellanoxAdapater() bool {
 	adapterName, err := getMellanoxAdapterName()
 	if err != nil {
 		log.Errorf("Error while getting mellanox adapter name: %v", err)
-		return
+		return false
 	} else if adapterName == "" {
-		log.Printf("No Mellanox adapter found so exiting the monitoring of Mellanox Adapter")
-		return
+		log.Printf("No Mellanox adapter found")
+		return false
 	}
 	log.Printf("Name of Mellanox adapter : %v", adapterName)
+	return true
+}
+
+// Regularly monitors the Mellanox PriorityVLANGTag registry value and sets it to desired value if needed
+func MonitorAndSetMellanoxRegKeyPriorityVLANTag() {
 	for {
-		err := SetMellanoxPriorityVLANTag(adapterName)
-		if err != nil {
-			log.Errorf("error while monitoring and setting Mellanox Reg Key value: %v", err)
+		adapterName, err := getMellanoxAdapterName()
+		if err == nil && adapterName != "" {
+			err := SetMellanoxPriorityVLANTag(adapterName)
+			if err != nil {
+				log.Errorf("error while monitoring and setting Mellanox Reg Key value: %v", err)
+			}
+			time.Sleep(mellanoxPriorityVLANTagMonitorInterval)
+		} else {
+			log.Printf("getMellanoxAdapterName returned err: %v and adapterName: %s", err, adapterName)
 		}
-		time.Sleep(mellanoxPriorityVLANTagMonitorInterval)
 	}
 }
 
