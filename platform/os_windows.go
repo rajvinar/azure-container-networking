@@ -228,10 +228,10 @@ func MonitorAndSetMellanoxRegKeyPriorityVLANTag() {
 			if err != nil {
 				log.Errorf("error while monitoring and setting Mellanox Reg Key value: %v", err)
 			}
-			time.Sleep(mellanoxPriorityVLANTagMonitorInterval)
 		} else {
 			log.Printf("getMellanoxAdapterName returned err: %v and adapterName: %s", err, adapterName)
 		}
+		time.Sleep(mellanoxPriorityVLANTagMonitorInterval)
 	}
 }
 
