@@ -180,9 +180,10 @@ func ReplaceFile(source, destination string) error {
 	return os.Rename(source, destination)
 }
 
+// Mellanox adapter not applicable for linux
 func HasMellanoxAdapater() bool {
 	return false
 }
 
 // Not needed for Linux
-func MonitorAndSetMellanoxRegKeyPriorityVLANTag() {}
+func MonitorAndSetMellanoxRegKeyPriorityVLANTag(ctx context.Context) {}

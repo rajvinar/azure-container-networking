@@ -5,6 +5,7 @@ package platform
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -218,18 +219,37 @@ func HasMellanoxAdapater() bool {
 }
 
 // Regularly monitors the Mellanox PriorityVLANGTag registry value and sets it to desired value if needed
-func MonitorAndSetMellanoxRegKeyPriorityVLANTag() {
+func MonitorAndSetMellanoxRegKeyPriorityVLANTag(ctx context.Context) {
+	// for {
+	// 	adapterName, err := getMellanoxAdapterName()
+	// 	if err == nil && adapterName != "" {
+	// 		err := SetMellanoxPriorityVLANTag(adapterName)
+	// 		if err != nil {
+	// 			log.Errorf("error while monitoring and setting Mellanox Reg Key value: %v", err)
+	// 		}
+	// 	} else {
+	// 		log.Printf("getMellanoxAdapterName returned err: %v and adapterName: %s", err, adapterName)
+	// 	}
+	// 	time.Sleep(mellanoxPriorityVLANTagMonitorInterval)
+	// }
+	ticker := time.NewTicker(mellanoxPriorityVLANTagMonitorInterval)
+	defer ticker.Stop()
 	for {
-		adapterName, err := getMellanoxAdapterName()
-		if err == nil && adapterName != "" {
-			err := SetMellanoxPriorityVLANTag(adapterName)
-			if err != nil {
-				log.Errorf("error while monitoring and setting Mellanox Reg Key value: %v", err)
+		select {
+		case <-ctx.Done():
+			fmt.Println("context cancelled, stopping Mellanox Monitoring:", ctx.Err())
+			return
+		case <-ticker.C:
+			adapterName, err := getMellanoxAdapterName()
+			if err == nil && adapterName != "" {
+				err := SetMellanoxPriorityVLANTag(adapterName)
+				if err != nil {
+					log.Errorf("error while monitoring and setting Mellanox Reg Key value: %v", err)
+				}
+			} else {
+				log.Printf("getMellanoxAdapterName returned err: %v and adapterName: %s", err, adapterName)
 			}
-		} else {
-			log.Printf("getMellanoxAdapterName returned err: %v and adapterName: %s", err, adapterName)
 		}
-		time.Sleep(mellanoxPriorityVLANTagMonitorInterval)
 	}
 }
 
