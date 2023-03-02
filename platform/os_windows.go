@@ -376,7 +376,7 @@ func checkMellanoxPriorityVLANTagValueForV4(adapterName string, expectedValue in
 		return false, fmt.Errorf("failed to convert PriorityVLANTag value to integer: %w", err)
 	}
 
-	return intValue != expectedValue, nil
+	return intValue == expectedValue, nil
 }
 
 // Checks if a Mellanox adapter's PriorityVLANTag value
@@ -394,7 +394,7 @@ func checkMellanoxPriorityVLANTagValueForV3(registryKeyFullPath, adapterName str
 		return false, fmt.Errorf("failed to convert PriorityVLANTag value to integer: %w", err)
 	}
 
-	return intValue != expectedValue, nil
+	return intValue == expectedValue, nil
 }
 
 func GetOSDetails() (map[string]string, error) {
