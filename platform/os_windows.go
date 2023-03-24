@@ -83,7 +83,7 @@ const (
 	regValueForVLANTag = 3
 
 	// Interval between successive checks for mellanox adapter's PriorityVLANTag value
-	mellanoxPriorityVLANTagMonitorInterval = 5 * time.Second
+	defaultMellanoxMonitorInterval = 30 * time.Second
 )
 
 // Flag to check if sdnRemoteArpMacAddress registry key is set
@@ -219,20 +219,12 @@ func HasMellanoxAdapater() bool {
 }
 
 // Regularly monitors the Mellanox PriorityVLANGTag registry value and sets it to desired value if needed
-func MonitorAndSetMellanoxRegKeyPriorityVLANTag(ctx context.Context) {
-	// for {
-	// 	adapterName, err := getMellanoxAdapterName()
-	// 	if err == nil && adapterName != "" {
-	// 		err := SetMellanoxPriorityVLANTag(adapterName)
-	// 		if err != nil {
-	// 			log.Errorf("error while monitoring and setting Mellanox Reg Key value: %v", err)
-	// 		}
-	// 	} else {
-	// 		log.Printf("getMellanoxAdapterName returned err: %v and adapterName: %s", err, adapterName)
-	// 	}
-	// 	time.Sleep(mellanoxPriorityVLANTagMonitorInterval)
-	// }
-	ticker := time.NewTicker(mellanoxPriorityVLANTagMonitorInterval)
+func MonitorAndSetMellanoxRegKeyPriorityVLANTag(ctx context.Context, intervalSecs int) {
+	interval := defaultMellanoxMonitorInterval
+	if intervalSecs > 0 {
+		interval = time.Duration(intervalSecs) * time.Second
+	}
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
 		select {

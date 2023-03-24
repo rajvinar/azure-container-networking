@@ -186,4 +186,4 @@ func HasMellanoxAdapater() bool {
 }
 
 // Not needed for Linux
-func MonitorAndSetMellanoxRegKeyPriorityVLANTag(ctx context.Context) {}
+func MonitorAndSetMellanoxRegKeyPriorityVLANTag(ctx context.Context, intervalSecs int) {}
