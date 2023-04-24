@@ -229,7 +229,7 @@ func MonitorAndSetMellanoxRegKeyPriorityVLANTag(ctx context.Context, intervalSec
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("context cancelled, stopping Mellanox Monitoring:", ctx.Err())
+			log.Printf("context cancelled, stopping Mellanox Monitoring: %v", ctx.Err())
 			return
 		case <-ticker.C:
 			adapterName, err := getMellanoxAdapterName()
