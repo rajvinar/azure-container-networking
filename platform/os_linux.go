@@ -181,9 +181,9 @@ func ReplaceFile(source, destination string) error {
 }
 
 // Mellanox adapter not applicable for linux
-func HasMellanoxAdapater() bool {
+func HasMellanoxAdapter() bool {
 	return false
 }
 
 // Not needed for Linux
-func MonitorAndSetMellanoxRegKeyPriorityVLANTag(ctx context.Context, intervalSecs int) {}
+func MonitorAndSetMellanoxRegKeyPriorityVLANTag(_ context.Context, _ int) {}
