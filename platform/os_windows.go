@@ -89,6 +89,10 @@ const (
 // Flag to check if sdnRemoteArpMacAddress registry key is set
 var sdnRemoteArpMacAddressSet = false
 
+var errorMellanoxAdapterNotFound = fmt.Errorf("no network adapter found with %s in description", mellanoxSearchString)
+
+var errorMellanoxDeviceNotFound = fmt.Errorf("no network device found with %s in description", mellanoxSearchString)
+
 // GetOSInfo returns OS version information.
 func GetOSInfo() string {
 	return "windows"
@@ -246,14 +250,14 @@ func MonitorAndSetMellanoxRegKeyPriorityVLANTag(ctx context.Context, intervalSec
 }
 
 func getMellanoxAdapterName() (string, error) {
-	//get mellanox adapter name
-	cmd := fmt.Sprintf(`Get-NetAdapter | Where-Object { $_.InterfaceDescription -like "%s" } | Select-Object -ExpandProperty Name`, mellanoxSearchString)
+	// get mellanox adapter name
+	cmd := fmt.Sprintf(`Get-NetAdapter | Where-Object { $_.InterfaceDescription -like %q } | Select-Object -ExpandProperty Name`, mellanoxSearchString)
 	adapterName, err := ExecutePowershellCommand(cmd)
 	if err != nil {
 		return "", fmt.Errorf("error while executing powershell command to get net adapter list: %w", err)
 	}
 	if adapterName == "" {
-		return "", fmt.Errorf("no network adapter found with %s in description", mellanoxSearchString)
+		return "", errorMellanoxAdapterNotFound
 	}
 	return adapterName, nil
 }
@@ -262,8 +266,8 @@ func getMellanoxAdapterName() (string, error) {
 // reg key value for PriorityVLANTag = 3  --> Packet priority and VLAN enabled
 // for more details goto https://docs.nvidia.com/networking/display/winof2v230/Configuring+the+Driver+Registry+Keys#ConfiguringtheDriverRegistryKeys-GeneralRegistryKeysGeneralRegistryKeys
 func SetMellanoxPriorityVLANTag(adapterName string) error {
-	//Find if adapter has property PriorityVLANTag (version 4 or up) or not (version 3)
-	cmd := fmt.Sprintf(`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like "%s" -and $_.Name -eq "%s" } | Select-Object -ExpandProperty Name`, priorityVLANTagIdentifier, adapterName)
+	// Find if adapter has property PriorityVLANTag (version 4 or up) or not (version 3)
+	cmd := fmt.Sprintf(`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like %q -and $_.Name -eq %q } | Select-Object -ExpandProperty Name`, priorityVLANTagIdentifier, adapterName)
 	adapterNameWithVLANTag, err := ExecutePowershellCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error while executing powershell command to get VLAN Tag advance property of %s: %w", adapterName, err)
@@ -282,7 +286,7 @@ func SetMellanoxPriorityVLANTag(adapterName string) error {
 // for version 4 and up is set to the given expected value
 func getMellanoxPriorityVLANTagValueForV4(adapterName string) (int, error) {
 	cmd := fmt.Sprintf(
-		`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like "%s" -and $_.Name -eq "%s" } | Select-Object -ExpandProperty RegistryValue`,
+		`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like %q -and $_.Name -eq %q } | Select-Object -ExpandProperty RegistryValue`,
 		priorityVLANTagIdentifier, adapterName)
 
 	regvalue, err := ExecutePowershellCommand(cmd)
@@ -300,9 +304,9 @@ func getMellanoxPriorityVLANTagValueForV4(adapterName string) (int, error) {
 
 // Checks if a Mellanox adapter's PriorityVLANTag value
 // for version 3 and below is set to the given expected value
-func getMellanoxPriorityVLANTagValueForV3(registryKeyFullPath, adapterName string) (int, error) {
+func getMellanoxPriorityVLANTagValueForV3(registryKeyFullPath string) (int, error) {
 	cmd := fmt.Sprintf(
-		`Get-ItemProperty -Path "%s" -Name "%s" | Select-Object -ExpandProperty "%s"`, registryKeyFullPath, priorityVLANTagIdentifier, priorityVLANTagIdentifier)
+		`Get-ItemProperty -Path %q -Name %q | Select-Object -ExpandProperty %q`, registryKeyFullPath, priorityVLANTagIdentifier, priorityVLANTagIdentifier)
 	regvalue, err := ExecutePowershellCommand(cmd)
 	if err != nil {
 		return 0, err
@@ -321,7 +325,7 @@ func getMellanoxPriorityVLANTagValueForV3(registryKeyFullPath, adapterName strin
 func setMellanoxPriorityVLANTagValueForV4(adapterName string) error {
 	currentVLANTagValue, err := getMellanoxPriorityVLANTagValueForV4(adapterName)
 	if err != nil {
-		return fmt.Errorf("error while checking registry value for PriorityVLANTag for adapter: %v", err)
+		return fmt.Errorf("error while checking registry value for PriorityVLANTag for adapter: %w", err)
 	}
 
 	if currentVLANTagValue == desiredRegValueForVLANTag {
@@ -330,7 +334,7 @@ func setMellanoxPriorityVLANTagValueForV4(adapterName string) error {
 	}
 
 	cmd := fmt.Sprintf(
-		`Set-NetAdapterAdvancedProperty -Name "%s" -RegistryKeyword "%s" -RegistryValue %d`, adapterName, priorityVLANTagIdentifier, desiredRegValueForVLANTag)
+		`Set-NetAdapterAdvancedProperty -Name %q -RegistryKeyword %q -RegistryValue %d`, adapterName, priorityVLANTagIdentifier, desiredRegValueForVLANTag)
 	_, err = ExecutePowershellCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error while setting up registry value for PriorityVLANTag for adapter: %w", err)
@@ -340,21 +344,22 @@ func setMellanoxPriorityVLANTagValueForV4(adapterName string) error {
 	return nil
 }
 
-// Adapter is version 3 or less as PriorityVLANTag was not found in advanced properties of mellanox adpater
+// Adapter is version 3 or less as PriorityVLANTag was not found in advanced properties of mellanox adapter
 func setMellanoxPriorityVLANTagValueForV3(adapterName string) error {
 	log.Printf("Searching through CIM instances for Network devices with %s in the name", mellanoxSearchString)
-	cmd := fmt.Sprintf(`Get-CimInstance -Namespace root/cimv2 -ClassName Win32_PNPEntity | Where-Object PNPClass -EQ "Net" | Where-Object { $_.Name -like "%s" } | Select-Object -ExpandProperty DeviceID`, mellanoxSearchString)
+	cmd := fmt.Sprintf(
+		`Get-CimInstance -Namespace root/cimv2 -ClassName Win32_PNPEntity | Where-Object PNPClass -EQ "Net" | Where-Object { $_.Name -like %q } | Select-Object -ExpandProperty DeviceID`,
+		mellanoxSearchString)
 	deviceid, err := ExecutePowershellCommand(cmd)
-
 	if err != nil {
 		return fmt.Errorf("error while executing powershell command to get device id of %s: %w", adapterName, err)
 	}
 	if deviceid == "" {
-		return fmt.Errorf("no network device found with %s in description", mellanoxSearchString)
+		return errorMellanoxDeviceNotFound
 	}
 
-	log.Printf("Device ID found and Getting PNP device properites for %s", deviceid)
-	cmd = fmt.Sprintf(`Get-PnpDeviceProperty -InstanceId "%s" | Where-Object KeyName -EQ "DEVPKEY_Device_Driver" | Select-Object -ExpandProperty Data`, deviceid)
+	log.Printf("Device ID found and Getting PNP device properties for %s", deviceid)
+	cmd = fmt.Sprintf(`Get-PnpDeviceProperty -InstanceId %q | Where-Object KeyName -EQ "DEVPKEY_Device_Driver" | Select-Object -ExpandProperty Data`, deviceid)
 	registryKeySuffix, err := ExecutePowershellCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error while executing powershell command to get registry suffix of device id %s: %w", deviceid, err)
@@ -362,9 +367,9 @@ func setMellanoxPriorityVLANTagValueForV3(adapterName string) error {
 
 	registryKeyFullPath := registryKeyPrefix + registryKeySuffix
 
-	currentVLANTagValue, err := getMellanoxPriorityVLANTagValueForV3(registryKeyFullPath, adapterName)
+	currentVLANTagValue, err := getMellanoxPriorityVLANTagValueForV3(registryKeyFullPath)
 	if err != nil {
-		return fmt.Errorf("error while checking registry value for PriorityVLANTag for adapter: %v", err)
+		return fmt.Errorf("error while checking registry value for PriorityVLANTag for adapter: %w", err)
 	}
 
 	if currentVLANTagValue == desiredRegValueForVLANTag {
@@ -372,14 +377,14 @@ func setMellanoxPriorityVLANTagValueForV3(adapterName string) error {
 		return nil
 	}
 
-	cmd = fmt.Sprintf(`New-ItemProperty -Path "%s" -Name "%s" -Value %d -PropertyType String -Force`, registryKeyFullPath, priorityVLANTagIdentifier, desiredRegValueForVLANTag)
+	cmd = fmt.Sprintf(`New-ItemProperty -Path %q -Name %q -Value %d -PropertyType String -Force`, registryKeyFullPath, priorityVLANTagIdentifier, desiredRegValueForVLANTag)
 	_, err = ExecutePowershellCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error while executing powershell command to set Item property for device id  %s: %w", deviceid, err)
 	}
 
 	log.Printf("Restarting Mellanox network adapter for regkey change to take effect")
-	cmd = fmt.Sprintf(`Restart-NetAdapter -Name "%s"`, adapterName)
+	cmd = fmt.Sprintf(`Restart-NetAdapter -Name %q`, adapterName)
 	_, err = ExecutePowershellCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error while executing powershell command to restart net adapter  %s: %w", adapterName, err)
