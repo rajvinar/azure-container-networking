@@ -27,6 +27,7 @@ const (
 var (
 	errorMellanoxAdapterNotFound = fmt.Errorf("no network adapter found with %s in description", mellanoxSearchString)
 	errorMellanoxDeviceNotFound  = fmt.Errorf("no network device found with %s in description", mellanoxSearchString)
+	errorPowershellNotFound      = fmt.Errorf("failed to find powershell executable")
 )
 
 type Mellanox interface {
@@ -75,12 +76,9 @@ func (m *MellanoxImpl) SetPriorityVLANTag(desiredVal int) error {
 	}
 
 	if adapterNameWithVLANTag != "" {
-		err = m.setMellanoxPriorityVLANTagValueForV4(adapterNameWithVLANTag, desiredVal)
-	} else {
-		err = m.setMellanoxPriorityVLANTagValueForV3(adapterName, desiredVal)
+		return m.setMellanoxPriorityVLANTagValueForV4(adapterNameWithVLANTag, desiredVal)
 	}
-
-	return err
+	return m.setMellanoxPriorityVLANTagValueForV3(adapterName, desiredVal)
 }
 
 // Get PriorityVLANTag returns PriorityVLANTag value for Mellanox Adapter (both version 3 and version 4)
@@ -99,14 +97,9 @@ func (m *MellanoxImpl) GetPriorityVLANTag() (int, error) {
 
 	if adapterNameWithVLANTag != "" {
 		return m.getMellanoxPriorityVLANTagValueForV4(adapterNameWithVLANTag)
-	} else {
-		var registryKeyFullPath string
-		registryKeyFullPath, err = m.getRegistryFullPath()
-		if err != nil {
-			return 0, err
-		}
-		return m.getMellanoxPriorityVLANTagValueForV3(registryKeyFullPath)
 	}
+
+	return m.getMellanoxPriorityVLANTagValueForV3()
 }
 
 // Checks if a Mellanox adapter's PriorityVLANTag value
@@ -131,7 +124,7 @@ func (m *MellanoxImpl) getMellanoxPriorityVLANTagValueForV4(adapterName string) 
 
 // Checks if a Mellanox adapter's PriorityVLANTag value
 // for version 3 and below is set to the given expected value
-func (m *MellanoxImpl) getMellanoxPriorityVLANTagValueForV3(registryKeyFullPath string) (int, error) {
+func (m *MellanoxImpl) getMellanoxPriorityVLANTagValueForV3() (int, error) {
 	registryKeyFullPath, err := m.getRegistryFullPath()
 	if err != nil {
 		return 0, err
@@ -192,7 +185,7 @@ func (m *MellanoxImpl) setMellanoxPriorityVLANTagValueForV3(adapterName string, 
 	return nil
 }
 
-// Get registery full path for Mellanox Adapter
+// Get registry full path for Mellanox Adapter
 func (m *MellanoxImpl) getRegistryFullPath() (string, error) {
 	log.Printf("Searching through CIM instances for Network devices with %s in the name", mellanoxSearchString)
 	cmd := fmt.Sprintf(
@@ -220,7 +213,7 @@ func (m *MellanoxImpl) getRegistryFullPath() (string, error) {
 func executePowershellCommand(command string) (string, error) {
 	ps, err := exec.LookPath("powershell.exe")
 	if err != nil {
-		return "", fmt.Errorf("Failed to find powershell executable")
+		return "", errorPowershellNotFound
 	}
 
 	log.Printf("[Azure-Utils] %s", command)
@@ -233,7 +226,7 @@ func executePowershellCommand(command string) (string, error) {
 
 	err = cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("%s:%s", err.Error(), stderr.String())
+		return "", fmt.Errorf("%s:%w", stderr.String(), err)
 	}
 
 	return strings.TrimSpace(stdout.String()), nil
