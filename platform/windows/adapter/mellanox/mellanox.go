@@ -30,13 +30,21 @@ var (
 )
 
 type Mellanox interface {
+	// GetAdapter returns name of Mellanox adapter if found
+	// Must return errorMellanoxAdapterNotFound if adapter is not found or adapter name empty
 	GetAdapaterName() (string, error)
+
+	// Get PriorityVLANTag returns PriorityVLANTag value for Mellanox Adapter (both version 3 and version 4)
 	GetPriorityVLANTag() (int, error)
+
+	// Set Mellanox adapter's PriorityVLANTag value to desired value if adapter exists
 	SetPriorityVLANTag(int) error
 }
 
 type MellanoxImpl struct{}
 
+// GetAdapter returns name of Mellanox adapter if found
+// Returns errorMellanoxAdapterNotFound if adapter is not found or adapter name empty
 func (m *MellanoxImpl) GetAdapaterName() (string, error) {
 	// get mellanox adapter name
 	cmd := fmt.Sprintf(`Get-NetAdapter | Where-Object { $_.InterfaceDescription -like %q } | Select-Object -ExpandProperty Name`, mellanoxSearchString)
@@ -50,8 +58,8 @@ func (m *MellanoxImpl) GetAdapaterName() (string, error) {
 	return adapterName, nil
 }
 
-// Set Mellanox adapter's PriorityVLANTag value to 3 if adapter exists
-// reg key value for PriorityVLANTag = 3  --> Packet priority and VLAN enabled
+// Set Mellanox adapter's PriorityVLANTag value to desired value if adapter exists
+// 5/16/23 : right now setting desired reg key value for PriorityVLANTag = 3  --> Packet priority and VLAN enabled
 // for more details goto https://docs.nvidia.com/networking/display/winof2v230/Configuring+the+Driver+Registry+Keys#ConfiguringtheDriverRegistryKeys-GeneralRegistryKeysGeneralRegistryKeys
 func (m *MellanoxImpl) SetPriorityVLANTag(desiredVal int) error {
 	adapterName, err := m.GetAdapaterName()
@@ -75,6 +83,7 @@ func (m *MellanoxImpl) SetPriorityVLANTag(desiredVal int) error {
 	return err
 }
 
+// Get PriorityVLANTag returns PriorityVLANTag value for Mellanox Adapter (both version 3 and version 4)
 func (m *MellanoxImpl) GetPriorityVLANTag() (int, error) {
 	adapterName, err := m.GetAdapaterName()
 	if err != nil {

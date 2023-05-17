@@ -214,13 +214,9 @@ func hasMellanoxAdapter(m mellanox.Mellanox) bool {
 	return true
 }
 
+// Regularly monitors the Mellanox PriorityVLANGTag registry value and sets it to desired value if needed
 func MonitorAndSetMellanoxRegKeyPriorityVLANTag(ctx context.Context, intervalSecs int) {
 	m := &mellanox.MellanoxImpl{}
-	monitorAndSetMellanoxRegKeyPriorityVLANTag(m, ctx, intervalSecs)
-}
-
-// Regularly monitors the Mellanox PriorityVLANGTag registry value and sets it to desired value if needed
-func monitorAndSetMellanoxRegKeyPriorityVLANTag(m mellanox.Mellanox, ctx context.Context, intervalSecs int) {
 	interval := defaultMellanoxMonitorInterval
 	if intervalSecs > 0 {
 		interval = time.Duration(intervalSecs) * time.Second
@@ -233,21 +229,32 @@ func monitorAndSetMellanoxRegKeyPriorityVLANTag(m mellanox.Mellanox, ctx context
 			log.Printf("context cancelled, stopping Mellanox Monitoring: %v", ctx.Err())
 			return
 		case <-ticker.C:
-			currentVal, err := m.GetPriorityVLANTag()
+			err := updateMellanoxIfRequired(m)
 			if err != nil {
-				log.Errorf("error while monitoring and setting Mellanox Reg Key value: %v", err)
-				continue
-			}
-			if currentVal == desiredRegValueForVLANTag {
-				log.Printf("Mellanox PriorityVLANTag is already set to %v, skipping reset", desiredRegValueForVLANTag)
-				continue
-			}
-			err = m.SetPriorityVLANTag(desiredRegValueForVLANTag)
-			if err != nil {
-				log.Errorf("error while monitoring and setting Mellanox Reg Key value: %v", err)
+				log.Errorf("Error while monitoring mellanox, continuing: %v", err)
 			}
 		}
 	}
+}
+
+// Updates the priority VLAN Tag of mellanox adapter if not already set to the desired value
+func updateMellanoxIfRequired(m mellanox.Mellanox) error {
+	currentVal, err := m.GetPriorityVLANTag()
+	if err != nil {
+		return fmt.Errorf("error while getting Mellanox Reg Key value: %w", err)
+	}
+
+	if currentVal == desiredRegValueForVLANTag {
+		log.Printf("Mellanox PriorityVLANTag is already set to %v, skipping reset", desiredRegValueForVLANTag)
+		return nil
+	}
+
+	err = m.SetPriorityVLANTag(desiredRegValueForVLANTag)
+	if err != nil {
+		return fmt.Errorf("error while setting Mellanox Reg Key value: %w", err)
+	}
+
+	return nil
 }
 
 func GetOSDetails() (map[string]string, error) {
