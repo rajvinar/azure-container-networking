@@ -174,7 +174,7 @@ func ExecutePowershellCommand(command string) (string, error) {
 
 // SetSdnRemoteArpMacAddress sets the regkey for SDNRemoteArpMacAddress needed for multitenancy
 func SetSdnRemoteArpMacAddress() error {
-	if !sdnRemoteArpMacAddressSet {
+	if sdnRemoteArpMacAddressSet == false {
 		result, err := ExecutePowershellCommand(GetSdnRemoteArpMacAddressCommand)
 		if err != nil {
 			return err
