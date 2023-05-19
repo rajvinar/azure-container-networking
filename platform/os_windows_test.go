@@ -9,13 +9,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	errTestFailure = errors.New("test failure")
+)
+
 // Test if hasNetworkAdapter returns false on actual error or empty adapter name(an error)
 func TestHasNetworkAdapterReturnsError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockNetworkAdapter := mocks.NewMockNetworkAdapter(ctrl)
-	mockNetworkAdapter.EXPECT().GetAdapterName().Return("", errors.New("failed to get adapter name"))
+	mockNetworkAdapter.EXPECT().GetAdapterName().Return("", errTestFailure)
 
 	result := hasNetworkAdapter(mockNetworkAdapter)
 	assert.False(t, result)
@@ -39,7 +43,7 @@ func TestUpdatePriorityVLANTagIfRequiredReturnsError(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockNetworkAdapter := mocks.NewMockNetworkAdapter(ctrl)
-	mockNetworkAdapter.EXPECT().GetPriorityVLANTag().Return(0, errors.New("test failure"))
+	mockNetworkAdapter.EXPECT().GetPriorityVLANTag().Return(0, errTestFailure)
 	result := updatePriorityVLANTagIfRequired(mockNetworkAdapter, 3)
 	assert.EqualError(t, result, "error while getting Priority VLAN Tag value: test failure")
 }
@@ -74,8 +78,8 @@ func TestUpdatePriorityVLANTagIfRequiredIfCurrentValNotEqualDesiredValAndSetRetu
 	defer ctrl.Finish()
 
 	mockNetworkAdapter := mocks.NewMockNetworkAdapter(ctrl)
-	mockNetworkAdapter.EXPECT().GetPriorityVLANTag().Return(3+1, nil)
-	mockNetworkAdapter.EXPECT().SetPriorityVLANTag(3).Return(errors.New("test failure"))
+	mockNetworkAdapter.EXPECT().GetPriorityVLANTag().Return(1, nil)
+	mockNetworkAdapter.EXPECT().SetPriorityVLANTag(3).Return(errTestFailure)
 	result := updatePriorityVLANTagIfRequired(mockNetworkAdapter, 3)
 	assert.EqualError(t, result, "error while setting Priority VLAN Tag value: test failure")
 }
