@@ -187,7 +187,7 @@ func (m *Mellanox) getRegistryFullPath() (string, error) {
 		return "", errorMellanoxDeviceNotFound
 	}
 
-	//log.Printf("Device ID found and Getting PNP device properties for %s", deviceid)
+	// log.Printf("Device ID found and Getting PNP device properties for %s", deviceid)
 	cmd = fmt.Sprintf(`Get-PnpDeviceProperty -InstanceId %q | Where-Object KeyName -EQ "DEVPKEY_Device_Driver" | Select-Object -ExpandProperty Data`, deviceid)
 	registryKeySuffix, err := executePowershellCommand(cmd)
 	if err != nil {
