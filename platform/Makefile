@@ -5,7 +5,7 @@ MOCKGEN = $(TOOLS_BIN_DIR)/mockgen
 .PHONY: generate
 
 generate: $(MOCKGEN) ## Generate mock clients
-	$(MOCKGEN) -source=$(REPO_ROOT)/platform/windows/adapter/mellanox/mellanox.go -package=mocks Mellanox > windows/adapter/mellanox/mocks/mellanox_generated.go
+	$(MOCKGEN) -source=$(REPO_ROOT)/platform/windows/adapter/network_adapter.go -package=mocks NetworkAdapter > windows/adapter/mocks/networkadapter_generated.go
 
 $(MOCKGEN):
 	@make -C $(REPO_ROOT) $(MOCKGEN)
