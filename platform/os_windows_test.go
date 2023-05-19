@@ -44,7 +44,7 @@ func TestUpdatePriorityVLANTagIfRequiredReturnsError(t *testing.T) {
 
 	mockNetworkAdapter := mocks.NewMockNetworkAdapter(ctrl)
 	mockNetworkAdapter.EXPECT().GetPriorityVLANTag().Return(0, errTestFailure)
-	result := updatePriorityVLANTagIfRequired(mockNetworkAdapter, 3)
+	result := updatePriorityVLANTagIfRequired(mockNetworkAdapter, desiredVLANTagForMellanox)
 	assert.EqualError(t, result, "error while getting Priority VLAN Tag value: test failure")
 }
 
@@ -54,8 +54,8 @@ func TestUpdatePriorityVLANTagIfRequiredIfCurrentValEqualDesiredValue(t *testing
 	defer ctrl.Finish()
 
 	mockNetworkAdapter := mocks.NewMockNetworkAdapter(ctrl)
-	mockNetworkAdapter.EXPECT().GetPriorityVLANTag().Return(3, nil)
-	result := updatePriorityVLANTagIfRequired(mockNetworkAdapter, 3)
+	mockNetworkAdapter.EXPECT().GetPriorityVLANTag().Return(desiredVLANTagForMellanox, nil)
+	result := updatePriorityVLANTagIfRequired(mockNetworkAdapter, desiredVLANTagForMellanox)
 	assert.NoError(t, result)
 }
 
@@ -66,8 +66,8 @@ func TestUpdatePriorityVLANTagIfRequiredIfCurrentValNotEqualDesiredValAndSetRetu
 
 	mockNetworkAdapter := mocks.NewMockNetworkAdapter(ctrl)
 	mockNetworkAdapter.EXPECT().GetPriorityVLANTag().Return(1, nil)
-	mockNetworkAdapter.EXPECT().SetPriorityVLANTag(3).Return(nil)
-	result := updatePriorityVLANTagIfRequired(mockNetworkAdapter, 3)
+	mockNetworkAdapter.EXPECT().SetPriorityVLANTag(desiredVLANTagForMellanox).Return(nil)
+	result := updatePriorityVLANTagIfRequired(mockNetworkAdapter, desiredVLANTagForMellanox)
 	assert.NoError(t, result)
 }
 
@@ -79,7 +79,7 @@ func TestUpdatePriorityVLANTagIfRequiredIfCurrentValNotEqualDesiredValAndSetRetu
 
 	mockNetworkAdapter := mocks.NewMockNetworkAdapter(ctrl)
 	mockNetworkAdapter.EXPECT().GetPriorityVLANTag().Return(1, nil)
-	mockNetworkAdapter.EXPECT().SetPriorityVLANTag(3).Return(errTestFailure)
-	result := updatePriorityVLANTagIfRequired(mockNetworkAdapter, 3)
+	mockNetworkAdapter.EXPECT().SetPriorityVLANTag(desiredVLANTagForMellanox).Return(errTestFailure)
+	result := updatePriorityVLANTagIfRequired(mockNetworkAdapter, desiredVLANTagForMellanox)
 	assert.EqualError(t, result, "error while setting Priority VLAN Tag value: test failure")
 }
