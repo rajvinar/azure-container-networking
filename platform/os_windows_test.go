@@ -9,9 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	errTestFailure = errors.New("test failure")
-)
+var errTestFailure = errors.New("test failure")
 
 // Test if hasNetworkAdapter returns false on actual error or empty adapter name(an error)
 func TestHasNetworkAdapterReturnsError(t *testing.T) {
