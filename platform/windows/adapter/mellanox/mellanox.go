@@ -53,7 +53,7 @@ func (m *Mellanox) GetAdapterName() (string, error) {
 func (m *Mellanox) SetPriorityVLANTag(desiredVal int) error {
 	adapterName, err := m.GetAdapterName()
 	if err != nil {
-		return fmt.Errorf("failed to find mellanox adapater: %w", err)
+		return fmt.Errorf("failed to find mellanox adapter: %w", err)
 	}
 
 	// Find if adapter has property PriorityVLANTag (version 4 or up) or not (version 3)
@@ -73,7 +73,7 @@ func (m *Mellanox) SetPriorityVLANTag(desiredVal int) error {
 func (m *Mellanox) GetPriorityVLANTag() (int, error) {
 	adapterName, err := m.GetAdapterName()
 	if err != nil {
-		return 0, fmt.Errorf("failed to find mellanox adapater: %w", err)
+		return 0, fmt.Errorf("failed to find mellanox adapter: %w", err)
 	}
 
 	// Find if adapter has property PriorityVLANTag (version 4 or up) or not (version 3)
