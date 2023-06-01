@@ -36,7 +36,7 @@ type Mellanox struct{}
 // Returns errorMellanoxAdapterNotFound if adapter is not found or adapter name empty
 func (m *Mellanox) GetAdapterName() (string, error) {
 	// get mellanox adapter name
-	cmd := fmt.Sprintf(`Get-NetAdapter | Where-Object { $_.InterfaceDescription -like %q } | Select-Object -ExpandProperty Name`, mellanoxSearchString)
+	cmd := fmt.Sprintf(`Get-NetAdapter | Where-Object { $_.InterfaceDescription -like '%s' } | Select-Object -ExpandProperty Name`, mellanoxSearchString)
 	adapterName, err := executePowershellCommand(cmd)
 	if err != nil {
 		return "", fmt.Errorf("error while executing powershell command to get net adapter list: %w", err)
@@ -57,7 +57,7 @@ func (m *Mellanox) SetPriorityVLANTag(desiredVal int) error {
 	}
 
 	// Find if adapter has property PriorityVLANTag (version 4 or up) or not (version 3)
-	cmd := fmt.Sprintf(`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like %q -and $_.Name -eq %q } | Select-Object -ExpandProperty Name`, priorityVLANTagIdentifier, adapterName)
+	cmd := fmt.Sprintf(`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like '%s' -and $_.Name -eq '%s' } | Select-Object -ExpandProperty Name`, priorityVLANTagIdentifier, adapterName)
 	adapterNameWithVLANTag, err := executePowershellCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error while executing powershell command to get VLAN Tag advance property of %s: %w", adapterName, err)
@@ -77,7 +77,7 @@ func (m *Mellanox) GetPriorityVLANTag() (int, error) {
 	}
 
 	// Find if adapter has property PriorityVLANTag (version 4 or up) or not (version 3)
-	cmd := fmt.Sprintf(`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like %q -and $_.Name -eq %q } | Select-Object -ExpandProperty Name`, priorityVLANTagIdentifier, adapterName)
+	cmd := fmt.Sprintf(`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like '%s' -and $_.Name -eq '%s' } | Select-Object -ExpandProperty Name`, priorityVLANTagIdentifier, adapterName)
 	adapterNameWithVLANTag, err := executePowershellCommand(cmd)
 	if err != nil {
 		return 0, fmt.Errorf("error while executing powershell command to get VLAN Tag advance property of %s: %w", adapterName, err)
@@ -94,7 +94,7 @@ func (m *Mellanox) GetPriorityVLANTag() (int, error) {
 // for version 4 and up is set to the given expected value
 func (m *Mellanox) getMellanoxPriorityVLANTagValueForV4(adapterName string) (int, error) {
 	cmd := fmt.Sprintf(
-		`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like %q -and $_.Name -eq %q } | Select-Object -ExpandProperty RegistryValue`,
+		`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like '%s' -and $_.Name -eq '%s' } | Select-Object -ExpandProperty RegistryValue`,
 		priorityVLANTagIdentifier, adapterName)
 
 	regvalue, err := executePowershellCommand(cmd)
@@ -119,7 +119,7 @@ func (m *Mellanox) getMellanoxPriorityVLANTagValueForV3() (int, error) {
 	}
 
 	cmd := fmt.Sprintf(
-		`Get-ItemProperty -Path %q -Name %q | Select-Object -ExpandProperty %q`, registryKeyFullPath, priorityVLANTagIdentifier, priorityVLANTagIdentifier)
+		`Get-ItemProperty -Path '%s' -Name '%s' | Select-Object -ExpandProperty '%s'`, registryKeyFullPath, priorityVLANTagIdentifier, priorityVLANTagIdentifier)
 	regvalue, err := executePowershellCommand(cmd)
 	if err != nil {
 		return 0, err
@@ -137,7 +137,7 @@ func (m *Mellanox) getMellanoxPriorityVLANTagValueForV3() (int, error) {
 // set reg value for Priorityvlantag of adapter to 3 if not set already
 func (m *Mellanox) setMellanoxPriorityVLANTagValueForV4(adapterName string, desiredVal int) error {
 	cmd := fmt.Sprintf(
-		`Set-NetAdapterAdvancedProperty -Name %q -RegistryKeyword %q -RegistryValue %d`,
+		`Set-NetAdapterAdvancedProperty -Name '%s' -RegistryKeyword '%s' -RegistryValue %d`,
 		adapterName, priorityVLANTagIdentifier, desiredVal)
 	_, err := executePowershellCommand(cmd)
 	if err != nil {
@@ -156,7 +156,7 @@ func (m *Mellanox) setMellanoxPriorityVLANTagValueForV3(adapterName string, desi
 		return err
 	}
 
-	cmd := fmt.Sprintf(`New-ItemProperty -Path %q -Name %q -Value %d -PropertyType String -Force`,
+	cmd := fmt.Sprintf(`New-ItemProperty -Path '%s' -Name '%s' -Value %d -PropertyType String -Force`,
 		registryKeyFullPath, priorityVLANTagIdentifier, desiredVal)
 	_, err = executePowershellCommand(cmd)
 	if err != nil {
@@ -164,7 +164,7 @@ func (m *Mellanox) setMellanoxPriorityVLANTagValueForV3(adapterName string, desi
 	}
 
 	log.Printf("Restarting Mellanox network adapter for regkey change to take effect")
-	cmd = fmt.Sprintf(`Restart-NetAdapter -Name %q`, adapterName)
+	cmd = fmt.Sprintf(`Restart-NetAdapter -Name '%s'`, adapterName)
 	_, err = executePowershellCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error while executing powershell command to restart net adapter  %s: %w", adapterName, err)
@@ -177,7 +177,7 @@ func (m *Mellanox) setMellanoxPriorityVLANTagValueForV3(adapterName string, desi
 func (m *Mellanox) getRegistryFullPath() (string, error) {
 	log.Printf("Searching through CIM instances for Network devices with %s in the name", mellanoxSearchString)
 	cmd := fmt.Sprintf(
-		`Get-CimInstance -Namespace root/cimv2 -ClassName Win32_PNPEntity | Where-Object PNPClass -EQ "Net" | Where-Object { $_.Name -like %q } | Select-Object -ExpandProperty DeviceID`,
+		`Get-CimInstance -Namespace root/cimv2 -ClassName Win32_PNPEntity | Where-Object PNPClass -EQ "Net" | Where-Object { $_.Name -like '%s' } | Select-Object -ExpandProperty DeviceID`,
 		mellanoxSearchString)
 	deviceid, err := executePowershellCommand(cmd)
 	if err != nil {
@@ -187,7 +187,7 @@ func (m *Mellanox) getRegistryFullPath() (string, error) {
 		return "", errorMellanoxDeviceNotFound
 	}
 
-	cmd = fmt.Sprintf(`Get-PnpDeviceProperty -InstanceId %q | Where-Object KeyName -EQ "DEVPKEY_Device_Driver" | Select-Object -ExpandProperty Data`, deviceid)
+	cmd = fmt.Sprintf(`Get-PnpDeviceProperty -InstanceId '%s' | Where-Object KeyName -EQ "DEVPKEY_Device_Driver" | Select-Object -ExpandProperty Data`, deviceid)
 	registryKeySuffix, err := executePowershellCommand(cmd)
 	if err != nil {
 		return "", fmt.Errorf("error while executing powershell command to get registry suffix of device id %s: %w", deviceid, err)
