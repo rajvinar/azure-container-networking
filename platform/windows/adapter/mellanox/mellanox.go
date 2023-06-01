@@ -57,7 +57,8 @@ func (m *Mellanox) SetPriorityVLANTag(desiredVal int) error {
 	}
 
 	// Find if adapter has property PriorityVLANTag (version 4 or up) or not (version 3)
-	cmd := fmt.Sprintf(`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like '%s' -and $_.Name -eq '%s' } | Select-Object -ExpandProperty Name`, priorityVLANTagIdentifier, adapterName)
+	cmd := fmt.Sprintf(`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like '%s' -and $_.Name -eq '%s' } | Select-Object -ExpandProperty Name`,
+		priorityVLANTagIdentifier, adapterName)
 	adapterNameWithVLANTag, err := executePowershellCommand(cmd)
 	if err != nil {
 		return fmt.Errorf("error while executing powershell command to get VLAN Tag advance property of %s: %w", adapterName, err)
@@ -77,7 +78,8 @@ func (m *Mellanox) GetPriorityVLANTag() (int, error) {
 	}
 
 	// Find if adapter has property PriorityVLANTag (version 4 or up) or not (version 3)
-	cmd := fmt.Sprintf(`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like '%s' -and $_.Name -eq '%s' } | Select-Object -ExpandProperty Name`, priorityVLANTagIdentifier, adapterName)
+	cmd := fmt.Sprintf(`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like '%s' -and $_.Name -eq '%s' } | Select-Object -ExpandProperty Name`,
+		priorityVLANTagIdentifier, adapterName)
 	adapterNameWithVLANTag, err := executePowershellCommand(cmd)
 	if err != nil {
 		return 0, fmt.Errorf("error while executing powershell command to get VLAN Tag advance property of %s: %w", adapterName, err)
