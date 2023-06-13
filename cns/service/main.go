@@ -714,11 +714,15 @@ func main() {
 		return
 	}
 
-	// Set Mellanox adapter's PriorityVLANTag value to 3 if adapter exists
-	// reg key value for PriorityVLANTag = 3  --> Packet priority and VLAN enabled
-	// for more details goto https://docs.nvidia.com/networking/display/winof2v230/Configuring+the+Driver+Registry+Keys#ConfiguringtheDriverRegistryKeys-GeneralRegistryKeysGeneralRegistryKeys
-	if platform.HasMellanoxAdapter() {
-		go platform.MonitorAndSetMellanoxRegKeyPriorityVLANTag(rootCtx, cnsconfig.MellanoxMonitorIntervalSecs)
+	// We are only setting the PriorityVLANTag in 'cns.Direct' mode, because it neatly maps today, to 'isUsingMultitenancy'
+	// In the future, we would want to have a better CNS flag, to explicitly say, this CNS is using multitenancy
+	if config.ChannelMode == cns.Direct {
+		// Set Mellanox adapter's PriorityVLANTag value to 3 if adapter exists
+		// reg key value for PriorityVLANTag = 3  --> Packet priority and VLAN enabled
+		// for more details goto https://docs.nvidia.com/networking/display/winof2v230/Configuring+the+Driver+Registry+Keys#ConfiguringtheDriverRegistryKeys-GeneralRegistryKeysGeneralRegistryKeys
+		if platform.HasMellanoxAdapter() {
+			go platform.MonitorAndSetMellanoxRegKeyPriorityVLANTag(rootCtx, cnsconfig.MellanoxMonitorIntervalSecs)
+		}
 	}
 
 	// Initialze state in if CNS is running in CRD mode
