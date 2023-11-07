@@ -34,28 +34,23 @@ type Mellanox struct{}
 
 // GetAdapter returns name of Mellanox adapter if found
 // Returns errorMellanoxAdapterNotFound if adapter is not found or adapter name empty
-func (m *Mellanox) GetAdapterName() (string, error) {
+func (m *Mellanox) GetAdapterNames() ([]string, error) {
 	// get mellanox adapter name
 	cmd := fmt.Sprintf(`Get-NetAdapter | Where-Object { $_.InterfaceDescription -like '%s' } | Select-Object -ExpandProperty Name`, mellanoxSearchString)
-	adapterName, err := executePowershellCommand(cmd)
+	adapterNames, err := executePowershellCommand(cmd)
 	if err != nil {
-		return "", fmt.Errorf("error while executing powershell command to get net adapter list: %w", err)
+		return nil, fmt.Errorf("error while executing powershell command to get net adapter list: %w", err)
 	}
-	if adapterName == "" {
-		return "", errorMellanoxAdapterNotFound
+	if adapterNames == "" {
+		return nil, errorMellanoxAdapterNotFound
 	}
-	return adapterName, nil
+	return strings.Split(adapterNames, "\r\n"), nil
 }
 
 // Set Mellanox adapter's PriorityVLANTag value to desired value if adapter exists
 // 5/16/23 : right now setting desired reg key value for PriorityVLANTag = 3  --> Packet priority and VLAN enabled
 // for more details goto https://docs.nvidia.com/networking/display/winof2v230/Configuring+the+Driver+Registry+Keys#ConfiguringtheDriverRegistryKeys-GeneralRegistryKeysGeneralRegistryKeys
-func (m *Mellanox) SetPriorityVLANTag(desiredVal int) error {
-	adapterName, err := m.GetAdapterName()
-	if err != nil {
-		return fmt.Errorf("failed to find mellanox adapter: %w", err)
-	}
-
+func (m *Mellanox) SetPriorityVLANTag(adapterName string, desiredVal int) error {
 	// Find if adapter has property PriorityVLANTag (version 4 or up) or not (version 3)
 	cmd := fmt.Sprintf(`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like '%s' -and $_.Name -eq '%s' } | Select-Object -ExpandProperty Name`,
 		priorityVLANTagIdentifier, adapterName)
@@ -71,12 +66,7 @@ func (m *Mellanox) SetPriorityVLANTag(desiredVal int) error {
 }
 
 // Get PriorityVLANTag returns PriorityVLANTag value for Mellanox Adapter (both version 3 and version 4)
-func (m *Mellanox) GetPriorityVLANTag() (int, error) {
-	adapterName, err := m.GetAdapterName()
-	if err != nil {
-		return 0, fmt.Errorf("failed to find mellanox adapter: %w", err)
-	}
-
+func (m *Mellanox) GetPriorityVLANTag(adapterName string) (int, error) {
 	// Find if adapter has property PriorityVLANTag (version 4 or up) or not (version 3)
 	cmd := fmt.Sprintf(`Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like '%s' -and $_.Name -eq '%s' } | Select-Object -ExpandProperty Name`,
 		priorityVLANTagIdentifier, adapterName)

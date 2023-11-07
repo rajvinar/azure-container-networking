@@ -238,12 +238,12 @@ func HasMellanoxAdapter() bool {
 }
 
 func hasNetworkAdapter(na adapter.NetworkAdapter) bool {
-	adapterName, err := na.GetAdapterName()
+	adapterNames, err := na.GetAdapterNames()
 	if err != nil {
 		log.Errorf("Error while getting network adapter name: %v", err)
 		return false
 	}
-	log.Printf("Name of the network adapter : %v", adapterName)
+	log.Printf("Name of the network adapters : %v", adapterNames)
 	return true
 }
 
@@ -254,10 +254,8 @@ func MonitorAndSetMellanoxRegKeyPriorityVLANTag(ctx context.Context, intervalSec
 	if intervalSecs > 0 {
 		interval = time.Duration(intervalSecs) * time.Second
 	}
-	err := updatePriorityVLANTagIfRequired(m, desiredVLANTagForMellanox)
-	if err != nil {
-		log.Errorf("Error while monitoring mellanox, continuing: %v", err)
-	}
+	updatePriorityVLANTagIfRequired(m, desiredVLANTagForMellanox)
+
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
@@ -266,32 +264,32 @@ func MonitorAndSetMellanoxRegKeyPriorityVLANTag(ctx context.Context, intervalSec
 			log.Printf("context cancelled, stopping Mellanox Monitoring: %v", ctx.Err())
 			return
 		case <-ticker.C:
-			err := updatePriorityVLANTagIfRequired(m, desiredVLANTagForMellanox)
-			if err != nil {
-				log.Errorf("Error while monitoring mellanox, continuing: %v", err)
-			}
+			updatePriorityVLANTagIfRequired(m, desiredVLANTagForMellanox)
 		}
 	}
 }
 
 // Updates the priority VLAN Tag of mellanox adapter if not already set to the desired value
-func updatePriorityVLANTagIfRequired(na adapter.NetworkAdapter, desiredValue int) error {
-	currentVal, err := na.GetPriorityVLANTag()
+func updatePriorityVLANTagIfRequired(na adapter.NetworkAdapter, desiredValue int) {
+	adapterNames, err := na.GetAdapterNames()
 	if err != nil {
-		return fmt.Errorf("error while getting Priority VLAN Tag value: %w", err)
+		log.Errorf("error while getting adapter names for Mellanox: %w", err)
 	}
+	for _, adapterName := range adapterNames {
+		currentVal, err := na.GetPriorityVLANTag(adapterName)
+		if err != nil {
+			log.Errorf("error while getting Priority VLAN Tag value for adapter name %v: %w", adapterName, err)
+		}
 
-	if currentVal == desiredValue {
-		log.Printf("Adapter's PriorityVLANTag is already set to %v, skipping reset", desiredValue)
-		return nil
+		if currentVal == desiredValue {
+			log.Printf("Adapter's PriorityVLANTag is already set to %v, skipping reset for adapter name : %v", desiredValue, adapterName)
+		}
+
+		err = na.SetPriorityVLANTag(adapterName, desiredValue)
+		if err != nil {
+			log.Errorf("error while setting Priority VLAN Tag valuefor adapter name %v: %w", adapterName, err)
+		}
 	}
-
-	err = na.SetPriorityVLANTag(desiredValue)
-	if err != nil {
-		return fmt.Errorf("error while setting Priority VLAN Tag value: %w", err)
-	}
-
-	return nil
 }
 
 func GetOSDetails() (map[string]string, error) {

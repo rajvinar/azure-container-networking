@@ -4,13 +4,13 @@
 package adapter
 
 type NetworkAdapter interface {
-	// GetAdapter returns name of adapter if found
+	// GetAdapterNames returns array containing names of adapter if found
 	// Must return error if adapter is not found or adapter name empty
-	GetAdapterName() (string, error)
+	GetAdapterNames() ([]string, error)
 
 	// Get PriorityVLANTag returns PriorityVLANTag value for Adapter
-	GetPriorityVLANTag() (int, error)
+	GetPriorityVLANTag(adapterName string) (int, error)
 
 	// Set adapter's PriorityVLANTag value to desired value if adapter exists
-	SetPriorityVLANTag(int) error
+	SetPriorityVLANTag(adapterName string, value int) error
 }
